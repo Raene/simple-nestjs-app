@@ -1,0 +1,69 @@
+version: "3.9"
+services:
+    db:
+        container_name: pg_container
+        image: postgres:9.6
+        restart: always
+        volumes:
+            - ./db:/var/lib/postgresql/data
+        networks:
+            - node_network_dev
+        environment:
+          - POSTGRES_PASSWORD
+          - POSTGRES_USER
+          - POSTGRES_DB
+        ports:
+            - "5432:5432"
+
+    node_service_dev:
+        container_name: node_dev
+        build:
+            context: ./node_service
+            target: development
+        environment:
+          - NODE_ENV
+          - PORT
+          - DB_HOST
+          - POSTGRES_USER
+          - JWTSECRET
+          - POSTGRES_DB
+          - POSTGRES_PASSWORD
+          - JWT_SECRET
+          - JWT_TTL
+          - THROTTLE_TTL
+          - THROTTLE_LIMIT
+        networks:
+            - node_network_dev
+        command: npm run start:dev
+        volumes:
+            - type: bind
+              source: ./node_service
+              target: /usr/src/app
+        depends_on:
+            - db
+        restart: always
+        ports:
+          - "8080:8080"
+
+    prune_job_service:
+        container_name: prune_service
+        build:
+            context: ./prune_job_service
+            target: development
+        networks:
+            - node_network_dev
+        volumes:
+            - type: bind
+              source: ./prune_job_service
+              target: /usr/src/app
+        environment:
+          - DB_HOST
+          - POSTGRES_USER
+          - POSTGRES_DB
+          - POSTGRES_PASSWORD
+        depends_on:
+            - db
+        restart: always
+
+networks:
+    node_network_dev:
